@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>us.hebi.matlab</groupId>
+    <version>1.0-SNAPSHOT</version>
+    <artifactId>hebicam</artifactId>
+
+    <name>HebiCam</name>
+    <description>MATLAB utility for streaming video acquisition</description>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0</url>
+            <distribution>repo</distribution>
+        </license>
+        <license>
+            <name>GNU General Public License (GPL) version 2, or any later version</name>
+            <url>http://www.gnu.org/licenses/</url>
+            <distribution>repo</distribution>
+        </license>
+        <license>
+            <name>GPLv2 with Classpath exception</name>
+            <url>http://www.gnu.org/software/classpath/license.html</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>Florian Enner</name>
+            <email>florian@hebirobotics.com</email>
+        </developer>
+    </developers>
+
+    <scm>
+        <url>https://github.com/HebiRobotics/HebiCam</url>
+        <connection>scm:git:git://github.com/HebiRobotics/HebiCam.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/HebiRobotics/HebiCam.git</developerConnection>
+    </scm>
+
+    <properties>
+        <!-- Dependency versions. KEEP IN ALPHABETICAL ORDER-->
+        <javacv.version>0.11</javacv.version>
+        <javacpp.version>0.11</javacpp.version>
+        <junit.version>4.11</junit.version>
+
+        <opencv.version>2.4.11</opencv.version>
+        <ffmpeg.version>2.6.1</ffmpeg.version>
+
+        <!-- Target OS Architecture -->
+        <target.arch>-x86_64</target.arch>
+
+        <!-- Default to minimum Java version compatible with MATLAB >2009a -->
+        <maven.compiler.source>1.6</maven.compiler.source>
+        <maven.compiler.target>1.6</maven.compiler.target>
+
+        <!-- Other Properties -->
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <dependencies>
+
+        <!-- JavaCV source (OpenCV, FFmpeg, etc.) -->
+        <dependency>
+            <groupId>org.bytedeco</groupId>
+            <artifactId>javacv</artifactId>
+            <version>${javacv.version}</version>
+        </dependency>
+
+        <!-- OpenCV Binaries -->
+        <dependency>
+            <groupId>org.bytedeco.javacpp-presets</groupId>
+            <artifactId>opencv</artifactId>
+            <version>${opencv.version}-${javacpp.version}</version>
+            <classifier>windows${target.arch}</classifier>
+        </dependency>
+        <dependency>
+            <groupId>org.bytedeco.javacpp-presets</groupId>
+            <artifactId>opencv</artifactId>
+            <version>${opencv.version}-${javacpp.version}</version>
+            <classifier>macosx${target.arch}</classifier>
+        </dependency>
+        <dependency>
+            <groupId>org.bytedeco.javacpp-presets</groupId>
+            <artifactId>opencv</artifactId>
+            <version>${opencv.version}-${javacpp.version}</version>
+            <classifier>linux${target.arch}</classifier>
+        </dependency>
+
+        <!-- FFmpeg Binaries -->
+        <dependency>
+            <groupId>org.bytedeco.javacpp-presets</groupId>
+            <artifactId>ffmpeg</artifactId>
+            <version>${ffmpeg.version}-${javacpp.version}</version>
+            <classifier>windows${target.arch}</classifier>
+        </dependency>
+        <dependency>
+            <groupId>org.bytedeco.javacpp-presets</groupId>
+            <artifactId>ffmpeg</artifactId>
+            <version>${ffmpeg.version}-${javacpp.version}</version>
+            <classifier>macosx${target.arch}</classifier>
+        </dependency>
+        <dependency>
+            <groupId>org.bytedeco.javacpp-presets</groupId>
+            <artifactId>ffmpeg</artifactId>
+            <version>${ffmpeg.version}-${javacpp.version}</version>
+            <classifier>linux${target.arch}</classifier>
+        </dependency>
+
+        <dependency> <!-- Unit Tests -->
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+
+            <plugin> <!-- Add MATLAB script(s) to target dir to make it easier to find -->
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>2.6</version>
+                <executions>
+                    <execution>
+                        <id>copy-resources</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${basedir}/target/</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${basedir}/src/main/resources/matlab/</directory>
+                                    <filtering>true</filtering>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin> <!-- Builds a full-assembly jar and can rename classpaths -->
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>2.3</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <artifactSet>
+                                <excludes>
+                                    <!-- Exclude binaries that are not needed, but referenced by JavaCV -->
+                                    <exclude>org.bytedeco.javacpp-presets:flycapture:jar:*</exclude>
+                                    <exclude>org.bytedeco.javacpp-presets:libdc1394:jar:*</exclude>
+                                    <exclude>org.bytedeco.javacpp-presets:libfreenect:jar:*</exclude>
+                                    <exclude>org.bytedeco.javacpp-presets:videoinput:jar:*</exclude>
+                                    <exclude>org.bytedeco.javacpp-presets:artoolkitplus:jar:*</exclude>
+                                    <exclude>org.bytedeco.javacpp-presets:flandmark:jar:*</exclude>
+                                </excludes>
+                            </artifactSet>
+                        </configuration>
+                    </execution>
+                </executions>
+                <configuration>
+                    <finalName>${project.artifactId}-${project.version}-all${target.arch}</finalName>
+                </configuration>
+            </plugin>
+
+        </plugins>
+    </build>
+
+</project>
