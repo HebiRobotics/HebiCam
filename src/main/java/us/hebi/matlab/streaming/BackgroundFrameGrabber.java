@@ -26,6 +26,7 @@ import org.bytedeco.javacv.Frame;
 import org.bytedeco.javacv.FrameGrabber;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -49,9 +50,19 @@ public class BackgroundFrameGrabber {
         // Grab first frame to initialize converter and shared memory with correct dimensions
         grabber.start();
         Frame frame = grabber.grabFrame();
-        checkArgument(getChannels() == 3, "Currently only RGB images are supported");
-        rgbConverter = MatlabImageConverter.createRgbConverter(frame.imageWidth, frame.imageHeight);
-        sharedMemory = SharedMemory.allocate(frame.imageWidth * frame.imageHeight * 3);
+
+        switch (grabber.getImageMode()) {
+            case COLOR:
+                matlabImageConverter = new MatlabImageConverterBGR(frame.imageWidth, frame.imageHeight);
+                break;
+            case GRAY:
+                matlabImageConverter = new MatlabImageConverterGrayscale(frame.imageWidth, frame.imageHeight);
+                break;
+            default:
+                throw new IllegalArgumentException("Unsupported image mode: " + grabber.getImageMode());
+        }
+
+        sharedMemory = SharedMemory.allocate(HEADER_BYTES + frame.imageWidth * frame.imageHeight * 3);
 
     }
 
@@ -70,7 +81,7 @@ public class BackgroundFrameGrabber {
             case GRAY:
                 return 1;
             default:
-                throw new IllegalStateException("Unknown image mode");
+                throw new IllegalStateException("Unsupported image mode " + grabber.getImageMode());
         }
     }
 
@@ -170,8 +181,12 @@ public class BackgroundFrameGrabber {
 
             // Read next image from device
             Frame frame = null;
+            long frameNumber = 0;
+            double timestamp = 0;
             synchronized (grabber) {
                 frame = grabber.grabFrame();
+                frameNumber = grabber.getFrameNumber();
+                timestamp = grabber.getTimestamp() * 1E-6; // [us] to [s]
             }
 
             // Retry grabbing frames after a timeout. Note that disconnecting IP cameras
@@ -194,8 +209,14 @@ public class BackgroundFrameGrabber {
                 if (!sharedMemory.isOpen())
                     return;
 
-                // Write to memory in column major (MATLAB) format
-                rgbConverter.convertFrameInto(frame, sharedMemory.clearBuffer());
+                // Write frame meta data to memory
+                ByteBuffer buffer = sharedMemory.clearBuffer();
+                buffer.putLong(frameNumber);
+                buffer.putDouble(timestamp);
+
+                // Add image data in a MATLAB readable format
+                matlabImageConverter.writeFrameToBuffer(frame, buffer);
+
             } finally {
                 memoryAccessLock.unlock();
             }
@@ -223,10 +244,11 @@ public class BackgroundFrameGrabber {
 
     // Setup
     final FrameGrabber grabber;
-    final MatlabImageConverter rgbConverter;
+    final MatlabImageConverter matlabImageConverter;
     final SharedMemory sharedMemory;
     final Lock memoryAccessLock = new ReentrantLock();
     private final long grabberTimeoutMs;
+    private final int HEADER_BYTES = 16; // 8 [frame#] + 8 [timestamp]
 
     // State
     final Object arrivalNotification = new Object();
