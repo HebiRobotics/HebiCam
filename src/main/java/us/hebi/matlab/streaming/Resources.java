@@ -74,13 +74,4 @@ public class Resources {
         }
     }
 
-    public static boolean isRemoteUri(String uri) {
-        try {
-            return new URI(uri).getHost() != null;
-        } catch (URISyntaxException e) {
-            return false;
-        }
-    }
-
-
 }

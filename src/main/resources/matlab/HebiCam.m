@@ -47,8 +47,8 @@ classdef HebiCam < handle
         cam
     end
     
-    methods (Static, Access = private)
-        function load_resources()
+    methods (Static, Access = public)
+        function loadLibs()
             % Loads the backing Java files and native binaries. This 
             % method assumes that the jar file is located in the same 
             % directory as this class-script, and that the file name 
@@ -56,7 +56,7 @@ classdef HebiCam < handle
             jarFileName = 'hebicam-1.0-SNAPSHOT-all-x86_64.jar';
 
             % Load only once
-            if ~exist('us.hebi.matlab.streaming.BackingHebiCam','class')
+            if ~exist('us.hebi.matlab.streaming.BackgroundFrameGrabber','class')
                 javaaddpath(...
                     fullfile(fileparts(mfilename('fullpath')), jarFileName));
             end
@@ -65,11 +65,73 @@ classdef HebiCam < handle
     
     methods (Access = public)
         
-        function this = HebiCam(url)
+        function this = HebiCam(uri)
             % constructor - connects to the video source
-            this.url = url;
-            HebiCam.load_resources();
-            this.cam = us.hebi.matlab.streaming.BackingHebiCam.open(url);
+            this.url = uri;
+            HebiCam.loadLibs();
+
+            % Create an appropriate frame grabber for the requested location
+            loc = us.hebi.matlab.streaming.DeviceLocation(uri);
+            if loc.isNumber() % 1, 2, 3, etc.
+                
+                 % Java uses zero based indexing
+                javaIndex = uri -1;
+                grabber = org.bytedeco.javacv.OpenCVFrameGrabber(javaIndex);
+
+            elseif loc.isUrl() % http://<ip>/mjpeg/, rtsp://...
+                % Some grabbers have issues if the url is valid, but the 
+                % device is not reachable, e.g., not turned on. This could
+                % result in MATLAB hanging forever, so we need to check 
+                % whether the device is actually on the network.
+                timeoutMs = 5000;
+                if ~loc.isReachableUrl(timeoutMs)
+                    error('remote url is not reachable');
+                end
+                
+                % Create Grabber
+                grabber = org.bytedeco.javacv.FFmpegFrameGrabber(uri);
+                
+                % Set 'low-latency' options for RTSP
+                % see https://www.ffmpeg.org/ffmpeg-protocols.html#rtp
+                grabber.setOption('rtsp_transport', 'udp');
+                grabber.setOption('max_delay', '0'); % disable reordering delay
+                grabber.setOption('reorder_queue_size', '1');
+                
+                % Sometimes mjpeg sources complain when the format is not
+                % set. For now we assume that http:// urls are mjpeg
+                % streams, which has been true for all ip cameras that I've
+                % tested so far. However, this may need to be adapted for
+                % some more exotic cameras.
+                if loc.hasUrlScheme('http')
+                    grabber.setFormat('mjpeg');
+                end
+                
+                % Force Pixel format if required (e.g. force grayscale)
+                % see https://ffmpeg.org/doxygen/2.7/pixfmt_8h_source.html
+                % support NONE, BGR24 and GRAY8
+                % grabber.setPixelFormat(org.bytedeco.javacpp.avutil.AV_PIX_FMT_BGR24); % [BGR BGR BGR] Color image
+                % grabber.setPixelFormat(org.bytedeco.javacpp.avutil.AV_PIX_FMT_GRAY8); % [X X X] Grayscale image
+
+            else
+                % file descriptor, e.g., /dev/usb0
+                grabber = org.bytedeco.javacv.OpenCVFrameGrabber(uri);
+            end
+
+            % Set a timeout in case a camera gets disconnected or shutdown. 
+            % Note that this only works for grabbing frames and not at 
+            % start.
+            grabber.setTimeout(1000); % [ms]
+            
+            % Set log level (ffmpeg only?)
+            logLevel = org.bytedeco.javacpp.avutil.AV_LOG_FATAL;
+            org.bytedeco.javacpp.avutil.av_log_set_level(logLevel);
+            
+            % Force color mode if applicable (make it an optional parameter)
+            grabber.setImageMode(org.bytedeco.javacv.FrameGrabber.ImageMode.COLOR); % color image
+            grabber.setImageMode(org.bytedeco.javacv.FrameGrabber.ImageMode.GRAY); % grayscale image
+
+            % Create a Java background thread for the FrameGrabber
+            this.cam = us.hebi.matlab.streaming.BackgroundFrameGrabber(grabber);
             
             % Get image data and shared memory location
             this.height = this.cam.getHeight();

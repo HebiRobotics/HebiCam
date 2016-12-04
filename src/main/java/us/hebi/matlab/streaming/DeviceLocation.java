@@ -71,16 +71,15 @@ public class DeviceLocation {
      * Check whether the address is reachable (ICMP ping) to avoid an infinite wait
      * (bug?) when connecting to IP cameras that are not on the network.
      *
-     * @param timeout timeout in seconds
+     * @param millis timeout in milliseconds
      * @return true if host is reachable within timeout
      */
-    public boolean isReachableUrl(double timeout) throws IOException {
+    public boolean isReachableUrl(int millis) throws IOException {
         if (!isUrl()) // makes sure that host exists
             return false;
 
         try {
             InetAddress host = InetAddress.getByName(new URI((String) uri).getHost());
-            int millis = (int) (timeout * 1E6);
             return host.isReachable(millis);
         } catch (URISyntaxException e) {
             return false;

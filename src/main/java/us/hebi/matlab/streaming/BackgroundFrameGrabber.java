@@ -22,15 +22,10 @@
 
 package us.hebi.matlab.streaming;
 
-import org.bytedeco.javacpp.avutil;
-import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.Frame;
 import org.bytedeco.javacv.FrameGrabber;
-import org.bytedeco.javacv.OpenCVFrameGrabber;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.URI;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -45,58 +40,19 @@ import static us.hebi.matlab.streaming.Resources.*;
  * @author Florian Enner < florian @ hebirobotics.com >
  * @since 01 May 2015
  */
-public class BackingHebiCam {
+public class BackgroundFrameGrabber {
 
-    public static BackingHebiCam open(Object object) throws Exception {
+    public BackgroundFrameGrabber(FrameGrabber grabber) throws FrameGrabber.Exception {
+        this.grabber = checkNotNull(grabber, "FrameGrabber can't be empty");
+        this.grabberTimeoutMs = this.grabber.getTimeout();
 
-        if (object instanceof Number) {
+        // Grab first frame to initialize converter and shared memory with correct dimensions
+        grabber.start();
+        Frame frame = grabber.grabFrame();
+        checkArgument(getChannels() == 3, "Currently only RGB images are supported");
+        rgbConverter = MatlabImageConverter.createRgbConverter(frame.imageWidth, frame.imageHeight);
+        sharedMemory = SharedMemory.allocate(frame.imageWidth * frame.imageHeight * 3);
 
-            // Numbered local device
-            int matlabIndex = ((Number) object).intValue();
-            checkArgument(matlabIndex > 0, "Device can't be below 1");
-            int device = matlabIndex - 1; // convert MATLAB (one based) index to Java index (zero based)
-            final FrameGrabber grabber = new OpenCVFrameGrabber(device);
-            return new BackingHebiCam(grabber);
-
-        } else if (object instanceof String) {
-            String device = (String) object;
-
-            // Remote URLs
-            if (Resources.isRemoteUri(device)) {
-                return openRemoteUri(new URI(device));
-            }
-
-            // Named local device
-            final FrameGrabber grabber = new OpenCVFrameGrabber(device);
-            return new BackingHebiCam(grabber);
-
-        }
-
-        throw new IllegalArgumentException("Expected device number, path, or remote URL");
-
-    }
-
-    private static BackingHebiCam openRemoteUri(URI uri) throws IOException, FrameGrabber.Exception {
-        InetAddress device = InetAddress.getByName(checkNotNull(uri).getHost());
-        checkNotNull(device, "No ip address found");
-
-        // Check whether the address is reachable (ICMP ping) to avoid an infinite wait (bug?) when
-        // connecting to ip cameras that are not on the network.
-        int timeoutMs = 5000;
-        if (!device.isReachable(timeoutMs)) {
-            throw new IllegalArgumentException("Could not ping camera on address " + device + ". " +
-                    "Please confirm that the address is correct and that the device is turned on.");
-        }
-
-        // Use FFmpeg for streaming
-        final FrameGrabber grabber = new FFmpegFrameGrabber(uri.toString());
-
-        // Assume that http:// urls are mjpeg streams to avoid errors. This has been true for all ip cameras
-        // that I've tested (other encodings were rtsp://), but there may needs to be another flag to support
-        // some more exotic cameras.
-        if ("http".equalsIgnoreCase(uri.getScheme()))
-            grabber.setFormat("mjpeg");
-        return new BackingHebiCam(grabber);
     }
 
     public int getHeight() {
@@ -141,7 +97,7 @@ public class BackingHebiCam {
         // Wait for arrival notification or time out
         synchronized (arrivalNotification) {
             try {
-                arrivalNotification.wait(DEFAULT_ACQUISITION_TIMEOUT_MS);
+                arrivalNotification.wait(grabberTimeoutMs);
             } catch (InterruptedException e) {
             }
         }
@@ -228,7 +184,7 @@ public class BackingHebiCam {
             }
 
             // Acquire lock - note that we time out after a reasonable time in order to avoid deadlocks
-            // if users don't release locks properly.
+            // if users don't release locks properly (e.g. ctrl-c during copy).
             boolean hasLock = memoryAccessLock.tryLock(1, SECONDS);
             if (!hasLock)
                 continue;
@@ -265,31 +221,12 @@ public class BackingHebiCam {
         }
     };
 
-    private BackingHebiCam(FrameGrabber grabber) throws FrameGrabber.Exception, IOException {
-        this.grabber = checkNotNull(grabber);
-
-        // Set a timeout in case a camera gets disconnected or shutdown. Note that this only works
-        // for grabFrame() and not start()
-        grabber.setTimeout(DEFAULT_ACQUISITION_TIMEOUT_MS);
-
-        // Disable repeated log lines such as errors and warnings
-        avutil.av_log_set_level(avutil.AV_LOG_SKIP_REPEATED);
-
-        // Grab first frame to initialize converter and shared memory with correct dimensions
-        grabber.start();
-        Frame frame = grabber.grabFrame();
-        checkArgument(getChannels() == 3, "Currently only RGB images are supported");
-        rgbConverter = MatlabImageConverter.createRgbConverter(frame.imageWidth, frame.imageHeight);
-        sharedMemory = SharedMemory.allocate(frame.imageWidth * frame.imageHeight * 3);
-
-    }
-
     // Setup
     final FrameGrabber grabber;
     final MatlabImageConverter rgbConverter;
     final SharedMemory sharedMemory;
     final Lock memoryAccessLock = new ReentrantLock();
-    final static int DEFAULT_ACQUISITION_TIMEOUT_MS = 1000;
+    private final long grabberTimeoutMs;
 
     // State
     final Object arrivalNotification = new Object();
