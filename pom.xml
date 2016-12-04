@@ -6,7 +6,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>us.hebi.matlab</groupId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.1-SNAPSHOT</version>
     <artifactId>hebicam</artifactId>
 
     <name>HebiCam</name>
@@ -45,12 +45,12 @@
 
     <properties>
         <!-- Dependency versions. KEEP IN ALPHABETICAL ORDER-->
-        <javacv.version>0.11</javacv.version>
-        <javacpp.version>0.11</javacpp.version>
         <junit.version>4.11</junit.version>
+        <javacv.version>1.2</javacv.version>
+        <opencv.version>3.1.0-1.2</opencv.version>
+        <ffmpeg.version>3.1.2-1.2</ffmpeg.version>
 
-        <opencv.version>2.4.11</opencv.version>
-        <ffmpeg.version>2.6.1</ffmpeg.version>
+        <exclude.ffmpeg>none</exclude.ffmpeg>
 
         <!-- Target OS Architecture -->
         <target.arch>-x86_64</target.arch>
@@ -76,19 +76,19 @@
         <dependency>
             <groupId>org.bytedeco.javacpp-presets</groupId>
             <artifactId>opencv</artifactId>
-            <version>${opencv.version}-${javacpp.version}</version>
+            <version>${opencv.version}</version>
             <classifier>windows${target.arch}</classifier>
         </dependency>
         <dependency>
             <groupId>org.bytedeco.javacpp-presets</groupId>
             <artifactId>opencv</artifactId>
-            <version>${opencv.version}-${javacpp.version}</version>
+            <version>${opencv.version}</version>
             <classifier>macosx${target.arch}</classifier>
         </dependency>
         <dependency>
             <groupId>org.bytedeco.javacpp-presets</groupId>
             <artifactId>opencv</artifactId>
-            <version>${opencv.version}-${javacpp.version}</version>
+            <version>${opencv.version}</version>
             <classifier>linux${target.arch}</classifier>
         </dependency>
 
@@ -96,19 +96,24 @@
         <dependency>
             <groupId>org.bytedeco.javacpp-presets</groupId>
             <artifactId>ffmpeg</artifactId>
-            <version>${ffmpeg.version}-${javacpp.version}</version>
+            <version>${ffmpeg.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.bytedeco.javacpp-presets</groupId>
+            <artifactId>ffmpeg</artifactId>
+            <version>${ffmpeg.version}</version>
             <classifier>windows${target.arch}</classifier>
         </dependency>
         <dependency>
             <groupId>org.bytedeco.javacpp-presets</groupId>
             <artifactId>ffmpeg</artifactId>
-            <version>${ffmpeg.version}-${javacpp.version}</version>
+            <version>${ffmpeg.version}</version>
             <classifier>macosx${target.arch}</classifier>
         </dependency>
         <dependency>
             <groupId>org.bytedeco.javacpp-presets</groupId>
             <artifactId>ffmpeg</artifactId>
-            <version>${ffmpeg.version}-${javacpp.version}</version>
+            <version>${ffmpeg.version}</version>
             <classifier>linux${target.arch}</classifier>
         </dependency>
 
