@@ -53,7 +53,7 @@ classdef HebiCam < handle
             % method assumes that the jar file is located in the same 
             % directory as this class-script, and that the file name 
             % matches the string below.
-            jarFileName = 'hebicam-1.0-SNAPSHOT-all-x86_64.jar';
+            jarFileName = 'hebicam-1.1-SNAPSHOT-all-x86_64.jar';
 
             % Load only once
             if ~exist('us.hebi.matlab.streaming.BackgroundFrameGrabber','class')
@@ -75,7 +75,7 @@ classdef HebiCam < handle
             if loc.isNumber() % 1, 2, 3, etc.
                 
                  % Java uses zero based indexing
-                javaIndex = uri -1;
+                javaIndex = uri-1;
                 grabber = org.bytedeco.javacv.OpenCVFrameGrabber(javaIndex);
 
             elseif loc.isUrl() % http://<ip>/mjpeg/, rtsp://...
@@ -106,12 +106,6 @@ classdef HebiCam < handle
                     grabber.setFormat('mjpeg');
                 end
                 
-                % Force Pixel format if required (e.g. force grayscale)
-                % see https://ffmpeg.org/doxygen/2.7/pixfmt_8h_source.html
-                % support NONE, BGR24 and GRAY8
-                % grabber.setPixelFormat(org.bytedeco.javacpp.avutil.AV_PIX_FMT_BGR24); % [BGR BGR BGR] Color image
-                % grabber.setPixelFormat(org.bytedeco.javacpp.avutil.AV_PIX_FMT_GRAY8); % [X X X] Grayscale image
-
             else
                 % file descriptor, e.g., /dev/usb0
                 grabber = org.bytedeco.javacv.OpenCVFrameGrabber(uri);
@@ -127,8 +121,10 @@ classdef HebiCam < handle
             org.bytedeco.javacpp.avutil.av_log_set_level(logLevel);
             
             % Force color mode if applicable (make it an optional parameter)
-            grabber.setImageMode(org.bytedeco.javacv.FrameGrabber.ImageMode.COLOR); % color image
-            grabber.setImageMode(org.bytedeco.javacv.FrameGrabber.ImageMode.GRAY); % grayscale image
+%             enumClass = 'org.bytedeco.javacv.FrameGrabber$ImageMode';
+%             mode = javaMethod('valueOf', enumClass, 'COLOR'); % color image
+%             mode = javaMethod('valueOf', enumClass, 'GRAY'); % grayscale
+%             grabber.setImageMode(mode);
 
             % Create a Java background thread for the FrameGrabber
             this.cam = us.hebi.matlab.streaming.BackgroundFrameGrabber(grabber);
@@ -139,29 +135,34 @@ classdef HebiCam < handle
             this.channels = this.cam.getChannels();
             path = char(this.cam.getBackingFile());
             
-            % Somehow HxWx1 does not work, so the mapping of
-            % greyscale images needs to be special cased.
-            if(this.channels == 1)
-                % greyscale
-                this.file = memmapfile(path, 'Format', ...
-                    {'uint8' [this.height this.width] 'pixels';});
-            else
-                % color image
-                this.file = memmapfile(path, 'Format', ...
-                    {'uint8' [this.height this.width this.channels] 'pixels';});
+            % Some versions have problems with mapping HxWx1, so we special
+            % case grayscale images.
+            pixelFormat = [this.height this.width this.channels];
+            if this.channels == 1 % grayscale
+               pixelFormat(3) = []; 
             end
+
+            % Map memory to data
+            this.file = memmapfile(path, 'Format', { ...
+                'uint64' 1 'frame';
+                'double' 1 'timestamp';
+                'uint8' pixelFormat 'pixels';
+                }, 'Repeat', 1);
             
             % start retrieval
             start(this.cam);
         end
         
-        function I = getsnapshot(this)
+        function [I,frame,timestamp] = getsnapshot(this)
             %getsnapshot - acquires a single image frame
             hasImage = tryGetNextImageLock(this.cam);
             if hasImage
                 % Mapped memory is accessed by reference, so the data
                 % needs to be copied manually.
-                I = this.file.Data.pixels * 1;
+                data = this.file.Data;
+                I = data.pixels * 1;
+                frame = data.frame * 1;
+                timestamp = data.timestamp * 1;
                 tryReleaseImageLock(this.cam);
             else
                 stop(this.cam);
