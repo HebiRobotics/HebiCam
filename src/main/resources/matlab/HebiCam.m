@@ -25,6 +25,7 @@ classdef HebiCam < handle
     %
     %   Example:
     %       % Connect to a device (e.g. usb camera) and display images
+    %       clear cam; % make sure usb device is not in use
     %       cam = HebiCam(1);
     %       fig = imshow(getsnapshot(cam));
     %       while true
@@ -36,7 +37,7 @@ classdef HebiCam < handle
     %       % Connect to an IP camera (e.g. AXIS) with various optional
     %       % stream settings. Note that the available options are
     %       % different for each manufacturer and/or device.
-    %       url = 'rtsp://10.10.10.10/axis-media/media.amp?'
+    %       url = 'rtsp://10.10.10.10/axis-media/media.amp?';
     %       url = [url 'videocodec=h264&resolution=640x480']
     %
     %       % Connect to url and get images in grayscale
@@ -45,7 +46,9 @@ classdef HebiCam < handle
     %       % Continuously display acquired images
     %       fig = imshow(getsnapshot(cam));
     %       while true
-    %           set(fig, 'CData', getsnapshot(cam));
+    %           [img, frame, time] = getsnapshot(cam);
+    %           set(fig, 'CData', img);
+    %           title(['Frame: ' num2str(frame) ', Time: ' num2str(time)]);
     %           drawnow;
     %       end
     
@@ -106,7 +109,7 @@ classdef HebiCam < handle
                 
                 % Java uses zero based indexing
                 javaIndex = args.URI-1;
-                grabber = org.bytedeco.javacv.OpenCVFrameGrabber(javaIndex);
+                grabber = org.bytedeco.javacv.VideoInputFrameGrabber(javaIndex);
                 
             elseif loc.isUrl() % http://<ip>/mjpeg/, rtsp://...
                 
@@ -139,7 +142,7 @@ classdef HebiCam < handle
                 
             else
                 % file descriptor, e.g., /dev/usb0
-                grabber = org.bytedeco.javacv.OpenCVFrameGrabber(args.URI);
+                grabber = org.bytedeco.javacv.VideoInputFrameGrabber(args.URI);
             end
             
             % Set a timeout in case a camera gets disconnected or shutdown.

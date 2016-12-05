@@ -22,29 +22,16 @@ class MatlabImageConverterGrayscale implements MatlabImageConverter {
         checkNotNull(destination);
 
         // Convert to OpenCV format and use OpenCV to reshape memory
-        Mat mat = null;
-        try {
-            mat = matConverter.convertToMat(source);
-            if (mat == null
-                    || mat.rows() != height
-                    || mat.cols() != width
-                    || mat.channels() != 1) {
-                System.err.println("Unexpected image dimensions. Skipping frame.");
-                return;
-            }
-
-            // Transpose
-            transpose(mat, transposed);
-
-            // Write to dest buffer
-            buffer.position(0);
-            destination.put(buffer);
-
-        } finally {
-            if (mat != null) {
-                mat.release();
-            }
+        Mat mat = matConverter.convertToMat(source); // Internally reuses the same Mat
+        if (mat == null || mat.rows() != height || mat.cols() != width || mat.channels() != 1) {
+            System.err.println("Unexpected image dimensions. Skipping frame.");
+            return;
         }
+
+        // Transpose to column-major format and write to destination buffer
+        transpose(mat, transposed);
+        buffer.position(0);
+        destination.put(buffer);
 
     }
 

@@ -50,19 +50,20 @@ public class BackgroundFrameGrabber {
         // Grab first frame to initialize converter and shared memory with correct dimensions
         grabber.start();
         Frame frame = grabber.grabFrame();
+        channels = frame.imageChannels;
 
-        switch (grabber.getImageMode()) {
-            case COLOR:
+        switch (channels) {
+            case 3:
                 matlabImageConverter = new MatlabImageConverterBGR(frame.imageWidth, frame.imageHeight);
                 break;
-            case GRAY:
+            case 1:
                 matlabImageConverter = new MatlabImageConverterGrayscale(frame.imageWidth, frame.imageHeight);
                 break;
             default:
-                throw new IllegalArgumentException("Unsupported image mode: " + grabber.getImageMode());
+                throw new IllegalArgumentException("Unsupported number of channels: " + channels);
         }
 
-        sharedMemory = SharedMemory.allocate(HEADER_BYTES + frame.imageWidth * frame.imageHeight * 3);
+        sharedMemory = SharedMemory.allocate(HEADER_BYTES + frame.imageWidth * frame.imageHeight * channels);
 
     }
 
@@ -75,14 +76,7 @@ public class BackgroundFrameGrabber {
     }
 
     public int getChannels() {
-        switch (grabber.getImageMode()) {
-            case COLOR:
-                return 3;
-            case GRAY:
-                return 1;
-            default:
-                throw new IllegalStateException("Unsupported image mode " + grabber.getImageMode());
-        }
+        return channels;
     }
 
     public String getBackingFile() {
@@ -249,6 +243,7 @@ public class BackgroundFrameGrabber {
     final Lock memoryAccessLock = new ReentrantLock();
     private final long grabberTimeoutMs;
     private final int HEADER_BYTES = 16; // 8 [frame#] + 8 [timestamp]
+    private final int channels;
 
     // State
     final Object arrivalNotification = new Object();

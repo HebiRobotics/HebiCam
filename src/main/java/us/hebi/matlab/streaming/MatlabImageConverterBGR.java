@@ -22,31 +22,15 @@ class MatlabImageConverterBGR implements MatlabImageConverter {
         checkNotNull(destination);
 
         // Convert to OpenCV format and use OpenCV to reshape memory
-        Mat mat = null;
-        try {
-            mat = matConverter.convertToMat(source);
-            convertMatToBuffer(mat, destination);
-        } finally {
-            if (mat != null) {
-                mat.release();
-            }
-        }
-
-    }
-
-    private void convertMatToBuffer(final Mat source, final ByteBuffer destination) {
-        checkNotNull(destination);
-        if (source == null
-                || source.rows() != height
-                || source.cols() != width
-                || source.channels() != 3) {
+        Mat mat = matConverter.convertToMat(source); // Internally reuses the same Mat
+        if (mat == null || mat.rows() != height || mat.cols() != width || mat.channels() != 3) {
             System.err.println("Unexpected image dimensions. Skipping frame.");
             return;
         }
 
         // Split into individual colors and and transpose each channel to
         // get Matlab-like column major format
-        split(source, bgr);
+        split(mat, bgr);
         transpose(bgr.get(2), rgbTransposed.get(0));
         transpose(bgr.get(1), rgbTransposed.get(1));
         transpose(bgr.get(0), rgbTransposed.get(2));

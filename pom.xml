@@ -49,6 +49,7 @@
         <javacv.version>1.2</javacv.version>
         <opencv.version>3.1.0-1.2</opencv.version>
         <ffmpeg.version>3.1.2-1.2</ffmpeg.version>
+        <videoinput.version>0.200-1.2</videoinput.version>
 
         <exclude.ffmpeg>none</exclude.ffmpeg>
 
@@ -117,6 +118,31 @@
             <classifier>linux${target.arch}</classifier>
         </dependency>
 
+        <!-- VideoInput Binaries -->
+        <dependency>
+            <groupId>org.bytedeco.javacpp-presets</groupId>
+            <artifactId>videoinput</artifactId>
+            <version>${videoinput.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.bytedeco.javacpp-presets</groupId>
+            <artifactId>videoinput</artifactId>
+            <version>${videoinput.version}</version>
+            <classifier>windows${target.arch}</classifier>
+        </dependency>
+        <dependency>
+            <groupId>org.bytedeco.javacpp-presets</groupId>
+            <artifactId>videoinput</artifactId>
+            <version>${videoinput.version}</version>
+            <classifier>macosx${target.arch}</classifier>
+        </dependency>
+        <dependency>
+            <groupId>org.bytedeco.javacpp-presets</groupId>
+            <artifactId>videoinput</artifactId>
+            <version>${videoinput.version}</version>
+            <classifier>linux${target.arch}</classifier>
+        </dependency>
+
         <dependency> <!-- Unit Tests -->
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
@@ -168,9 +194,9 @@
                                     <exclude>org.bytedeco.javacpp-presets:flycapture:jar:*</exclude>
                                     <exclude>org.bytedeco.javacpp-presets:libdc1394:jar:*</exclude>
                                     <exclude>org.bytedeco.javacpp-presets:libfreenect:jar:*</exclude>
-                                    <exclude>org.bytedeco.javacpp-presets:videoinput:jar:*</exclude>
                                     <exclude>org.bytedeco.javacpp-presets:artoolkitplus:jar:*</exclude>
                                     <exclude>org.bytedeco.javacpp-presets:flandmark:jar:*</exclude>
+                                    <!--<exclude>org.bytedeco.javacpp-presets:videoinput:jar:*</exclude>-->
                                 </excludes>
                             </artifactSet>
                         </configuration>
