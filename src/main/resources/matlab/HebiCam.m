@@ -1,16 +1,19 @@
 classdef HebiCam < handle
     % HebiCam acquires frames from streaming video sources
     %   cam = HebiCam(uri) returns an object that acquires images
-    %   from the specified URI. The URI can be the URL of an IP camera, the
-    %   the location of a local device (e.g. '/dev/video0'), or the number
-    %   of a local device (e.g. 1).
+    %   from the specified resource.
     %
-    %   Possible sources are limited to devices that are supported by 
-    %   FFMpeg or OpenCV.
+    %   cam = HebiCam(uri, 'ImageMode', 'gray') sets the color
+    %   mode. Valid inputs are 'GRAY' and 'COLOR'.
     %
-    %   Note that the underlying Java implementation currently only 
-    %   supports RGB images.
-    % 
+    %   cam = HebiCam(uri, 'timeout', value) additionally specifies a
+    %   timeout in [seconds] for grabbing a single frame. Defaults to 1s.
+    %
+    %   The resource can be an URL of an IP camera, a file descriptor
+    %   of a local device (e.g. '/dev/video0'), or a the number
+    %   of a local usb camera (e.g. 1). Possible sources are limited
+    %   to sources that are supported by FFMpeg or OpenCV.
+    %
     % HebiCam Properties:
     %    url      - video source, e.g., local device or remote ip camera
     %    width    - width of the gathered image
@@ -18,18 +21,31 @@ classdef HebiCam < handle
     %    channels - channel, e.g., rgb or grayscale
     %
     % HebiCam Methods:
-    %    getsnapshot - acquires a single image frame
+    %    getsnapshot - acquires a single image
     %
-    %    Example:
-    %       % Connect to a device, e.g., an Axis MJPG stream
-    %       url = 'http://<ip>/mjpg/video.mjpg?resolution=640x480';
-    %       cam = HebiCam(url);
-    %       
-    %       % Live display of continuously acquired frames
-    %       figure();
+    %   Example:
+    %       % Connect to a device (e.g. usb camera) and display images
+    %       cam = HebiCam(1);
     %       fig = imshow(getsnapshot(cam));
     %       while true
-    %           set(fig, 'CData', getsnapshot(cam)); 
+    %           set(fig, 'CData', getsnapshot(cam));
+    %           drawnow;
+    %       end
+    %
+    %    Example:
+    %       % Connect to an IP camera (e.g. AXIS) with various optional
+    %       % stream settings. Note that the available options are
+    %       % different for each manufacturer and/or device.
+    %       url = 'rtsp://10.10.10.10/axis-media/media.amp?'
+    %       url = [url 'videocodec=h264&resolution=640x480']
+    %
+    %       % Connect to url and get images in grayscale
+    %       cam = HebiCam(url, 'ImageMode', 'gray');
+    %
+    %       % Continuously display acquired images
+    %       fig = imshow(getsnapshot(cam));
+    %       while true
+    %           set(fig, 'CData', getsnapshot(cam));
     %           drawnow;
     %       end
     
@@ -49,39 +65,54 @@ classdef HebiCam < handle
     
     methods (Static, Access = public)
         function loadLibs()
-            % Loads the backing Java files and native binaries. This 
-            % method assumes that the jar file is located in the same 
-            % directory as this class-script, and that the file name 
+            % Loads the backing Java files and native binaries. This
+            % method assumes that the jar file is located in the same
+            % directory as this class-script, and that the file name
             % matches the string below.
             jarFileName = 'hebicam-1.1-SNAPSHOT-all-x86_64.jar';
-
+            
             % Load only once
-            if ~exist('us.hebi.matlab.streaming.BackgroundFrameGrabber','class')
+            if ~exist(...
+                    'us.hebi.matlab.streaming.BackgroundFrameGrabber',...
+                    'class')
                 javaaddpath(...
-                    fullfile(fileparts(mfilename('fullpath')), jarFileName));
+                    fullfile(fileparts(mfilename('fullpath')), ...
+                    jarFileName));
             end
         end
     end
     
     methods (Access = public)
         
-        function this = HebiCam(uri)
+        function this = HebiCam(varargin)
             % constructor - connects to the video source
-            this.url = uri;
+            
+            % parse user input
+            p = inputParser;
+            p.addRequired('URI', @(v) ~isempty(v) && (isscalar(v) || ischar(v)));
+            p.addParameter('Timeout', 1, @(v) isnumeric(v) && v > 0.001); % [s]
+            p.addParameter('ImageMode', [], @ischar);
+            p.parse(varargin{:});
+            args = p.Results;
+            
+            % make sure Java libraries have been loaded
             HebiCam.loadLibs();
-
+            
             % Create an appropriate frame grabber for the requested location
-            loc = us.hebi.matlab.streaming.DeviceLocation(uri);
+            this.url = args.URI;
+            loc = us.hebi.matlab.streaming.DeviceLocation(args.URI);
+            
             if loc.isNumber() % 1, 2, 3, etc.
                 
-                 % Java uses zero based indexing
-                javaIndex = uri-1;
+                % Java uses zero based indexing
+                javaIndex = args.URI-1;
                 grabber = org.bytedeco.javacv.OpenCVFrameGrabber(javaIndex);
-
+                
             elseif loc.isUrl() % http://<ip>/mjpeg/, rtsp://...
-                % Some grabbers have issues if the url is valid, but the 
+                
+                % Some grabbers have issues if the url is valid, but the
                 % device is not reachable, e.g., not turned on. This could
-                % result in MATLAB hanging forever, so we need to check 
+                % result in MATLAB hanging forever, so we need to check
                 % whether the device is actually on the network.
                 timeoutMs = 5000;
                 if ~loc.isReachableUrl(timeoutMs)
@@ -89,7 +120,7 @@ classdef HebiCam < handle
                 end
                 
                 % Create Grabber
-                grabber = org.bytedeco.javacv.FFmpegFrameGrabber(uri);
+                grabber = org.bytedeco.javacv.FFmpegFrameGrabber(args.URI);
                 
                 % Set 'low-latency' options for RTSP
                 % see https://www.ffmpeg.org/ffmpeg-protocols.html#rtp
@@ -108,24 +139,37 @@ classdef HebiCam < handle
                 
             else
                 % file descriptor, e.g., /dev/usb0
-                grabber = org.bytedeco.javacv.OpenCVFrameGrabber(uri);
+                grabber = org.bytedeco.javacv.OpenCVFrameGrabber(args.URI);
             end
-
-            % Set a timeout in case a camera gets disconnected or shutdown. 
-            % Note that this only works for grabbing frames and not at 
+            
+            % Set a timeout in case a camera gets disconnected or shutdown.
+            % Note that this only works for grabbing frames and not at
             % start.
-            grabber.setTimeout(1000); % [ms]
+            grabber.setTimeout(int32(args.Timeout * 1E3)); % [s] to [ms]
             
             % Set log level (ffmpeg only?)
             logLevel = org.bytedeco.javacpp.avutil.AV_LOG_FATAL;
             org.bytedeco.javacpp.avutil.av_log_set_level(logLevel);
             
-            % Force color mode if applicable (make it an optional parameter)
-%             enumClass = 'org.bytedeco.javacv.FrameGrabber$ImageMode';
-%             mode = javaMethod('valueOf', enumClass, 'COLOR'); % color image
-%             mode = javaMethod('valueOf', enumClass, 'GRAY'); % grayscale
-%             grabber.setImageMode(mode);
-
+            % Force color mode if applicable
+            if ~isempty(args.ImageMode)
+                
+                if strcmpi(args.ImageMode, 'COLOR') == 1
+                    enumField = 'COLOR';
+                elseif strcmpi(args.ImageMode, 'GRAY') == 1
+                    enumField = 'GRAY';
+                else
+                    error(['Unknown image mode: ' args.ImageMode]);
+                end
+                
+                % Java enums can't be instantiated directly, so we need
+                % to workaround using javaMethod()
+                enumClass = 'org.bytedeco.javacv.FrameGrabber$ImageMode';
+                mode = javaMethod('valueOf', enumClass, enumField);
+                grabber.setImageMode(mode);
+                
+            end
+            
             % Create a Java background thread for the FrameGrabber
             this.cam = us.hebi.matlab.streaming.BackgroundFrameGrabber(grabber);
             
@@ -139,9 +183,9 @@ classdef HebiCam < handle
             % case grayscale images.
             pixelFormat = [this.height this.width this.channels];
             if this.channels == 1 % grayscale
-               pixelFormat(3) = []; 
+                pixelFormat(3) = [];
             end
-
+            
             % Map memory to data
             this.file = memmapfile(path, 'Format', { ...
                 'uint64' 1 'frame';
@@ -172,7 +216,7 @@ classdef HebiCam < handle
         
     end
     
-     methods (Access = private)
+    methods (Access = private)
         function delete(this)
             % destructor - frees resources
             this.file = [];
