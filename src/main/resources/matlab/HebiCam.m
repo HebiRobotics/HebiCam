@@ -109,7 +109,7 @@ classdef HebiCam < handle
                 
                 % Java uses zero based indexing
                 javaIndex = args.URI-1;
-                grabber = org.bytedeco.javacv.VideoInputFrameGrabber(javaIndex);
+                grabber = us.hebi.matlab.streaming.FixedOpenCVFrameGrabber(javaIndex);
                 
             elseif loc.isUrl() % http://<ip>/mjpeg/, rtsp://...
                 
@@ -142,7 +142,7 @@ classdef HebiCam < handle
                 
             else
                 % file descriptor, e.g., /dev/usb0
-                grabber = org.bytedeco.javacv.VideoInputFrameGrabber(args.URI);
+                grabber = us.hebi.matlab.streaming.FixedOpenCVFrameGrabber(args.URI);
             end
             
             % Set a timeout in case a camera gets disconnected or shutdown.

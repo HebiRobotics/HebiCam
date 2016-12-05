@@ -118,7 +118,7 @@
             <classifier>linux${target.arch}</classifier>
         </dependency>
 
-        <!-- VideoInput Binaries -->
+        <!-- VideoInput Binaries (Windows only)-->
         <dependency>
             <groupId>org.bytedeco.javacpp-presets</groupId>
             <artifactId>videoinput</artifactId>
@@ -129,18 +129,6 @@
             <artifactId>videoinput</artifactId>
             <version>${videoinput.version}</version>
             <classifier>windows${target.arch}</classifier>
-        </dependency>
-        <dependency>
-            <groupId>org.bytedeco.javacpp-presets</groupId>
-            <artifactId>videoinput</artifactId>
-            <version>${videoinput.version}</version>
-            <classifier>macosx${target.arch}</classifier>
-        </dependency>
-        <dependency>
-            <groupId>org.bytedeco.javacpp-presets</groupId>
-            <artifactId>videoinput</artifactId>
-            <version>${videoinput.version}</version>
-            <classifier>linux${target.arch}</classifier>
         </dependency>
 
         <dependency> <!-- Unit Tests -->
