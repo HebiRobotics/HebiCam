@@ -25,11 +25,13 @@ class MatlabImageConverterGrayscale implements MatlabImageConverter {
         Mat mat = null;
         try {
             mat = matConverter.convertToMat(source);
-            checkArgument(mat != null
-                            && mat.rows() == height
-                            && mat.cols() == width
-                            && mat.channels() == 1,
-                    "bad dimensions");
+            if (mat == null
+                    || mat.rows() != height
+                    || mat.cols() != width
+                    || mat.channels() != 1) {
+                System.err.println("Unexpected image dimensions. Skipping frame.");
+                return;
+            }
 
             // Transpose
             transpose(mat, transposed);

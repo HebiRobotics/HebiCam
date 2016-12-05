@@ -36,10 +36,13 @@ class MatlabImageConverterBGR implements MatlabImageConverter {
 
     private void convertMatToBuffer(final Mat source, final ByteBuffer destination) {
         checkNotNull(destination);
-        checkArgument(source != null
-                && source.rows() == height
-                && source.cols() == width
-                && source.channels() == 3, "bad dimensions");
+        if (source == null
+                || source.rows() != height
+                || source.cols() != width
+                || source.channels() != 3) {
+            System.err.println("Unexpected image dimensions. Skipping frame.");
+            return;
+        }
 
         // Split into individual colors and and transpose each channel to
         // get Matlab-like column major format
