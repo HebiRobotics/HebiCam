@@ -36,8 +36,14 @@ cam = HebiCam(url, 'ImageMode', 'Gray');
 
 Windows USB Camera
 ```matlab
+clear cam; % make sure device is not in use
 cam = HebiCam(1);
 imshow(cam.getsnapshot());
+```
+
+Acquisition of a single frame
+```matlab
+[image, frameNumber, timestamp] = getsnapshot(cam);
 ```
 
 Live display of continuously acquired frames
