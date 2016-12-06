@@ -4,11 +4,13 @@ HebiCam
 Introduction
 ------------
 
-HebiCam is a MATLAB class that supports live video acquisition from a variety of sources. It is similar in functionality to MATLAB's [IP Camera](http://se.mathworks.com/hardware-support/ip-camera.html) support package, but provides support for a wider range of formats. HebiCam uses [JavaCV](https://github.com/bytedeco/javacv), and thus supports all formats that are supported by OpenCV and FFMpeg, including h264 and mjpeg streams. USB cameras are supported as well.
+HebiCam is a MATLAB class that supports live video acquisition from a variety of sources. It is similar in functionality to MATLAB's [IP Camera](http://se.mathworks.com/hardware-support/ip-camera.html) support package, but provides support for a wider range of formats. HebiCam uses [JavaCV](https://github.com/bytedeco/javacv), and thus supports all formats that are supported by OpenCV and FFMpeg, including h264 and mjpeg streams. USB cameras are supported on Windows and OSX.
 
 Prerequisites
 ------------
-HebiCam has been tested on Windows7/8, Ubuntu 14.04, and OSX Yosemite using MATLAB 2014a and 2015a. However, it should work on all MATLAB versions after 2009a. It does not require any particular Tooboxes.
+HebiCam has been tested on Windows7/8, Ubuntu 14.04, Ubuntu 16.04, and OSX 10.12 using MATLAB 2015a and 2016a. However, it should work on all MATLAB versions after 2009a. It does not require any particular Tooboxes.
+
+Note that in our testing we found problems connecting to USB cameras on Ubuntu due to issues with Video4Linux2 drivers, so USB cameras are only supported on Windows and OSX.
 
 Installation
 ------------
@@ -18,17 +20,18 @@ Installation
 
 Sample Usage
 ------------
-Axis IP Camera
+Axis IP Camera (mjpeg)
 ```matlab
 % Replace url with your device specific stream
 url = 'http://<ip address>/mjpg/video.mjpg?resolution=640x480';
 cam = HebiCam(url);
 ```
 
-Linux USB Camera
+Axis IP Camera (h264) with forced grayscale
 ```matlab
-cam = HebiCam('/dev/video0');
-imshow(cam.getsnapshot());
+% Replace url with your device specific stream
+url = 'rtsp://<ip address>/axis-media/media.amp?videocodec=h264&resolution=640x480';
+cam = HebiCam(url, 'ImageMode', 'Gray');
 ```
 
 Windows USB Camera
