@@ -8,7 +8,7 @@ HebiCam is a MATLAB class that supports live video acquisition from a variety of
 
 Prerequisites
 ------------
-HebiCam has been tested on Windows7/8, Ubuntu 14.04, Ubuntu 16.04, and OSX 10.12 using MATLAB 2015a and 2016a. However, it should work on all MATLAB versions after 2009a. It does not require any particular Tooboxes.
+HebiCam has been tested on Windows7/8, Ubuntu 16.04, and OSX 10.12 using MATLAB 2015a and 2016a. However, it should work on all MATLAB versions after 2009a. It does not require any particular Toolboxes.
 
 Note that in our testing we found problems connecting to USB cameras on Ubuntu due to issues with Video4Linux2 drivers, so USB cameras are only supported on Windows and OSX.
 
