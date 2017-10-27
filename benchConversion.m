@@ -100,6 +100,7 @@ if ~testMode
     % Convert to nicer looking table w/ sort
     results = struct2table(m);
     results = sortrows(results, {'channels', 'height'});
+    writetable(results)
     disp(results);
     
 end
