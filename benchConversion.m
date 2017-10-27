@@ -1,8 +1,8 @@
 %% Setup
-if(exist('sources.JavaImageConverter','class'))
-    clear all;
-    javarmpath('sources.jar');
-end
+% if(exist('sources.JavaImageConverter','class'))
+%     clear all;
+%     javarmpath('sources.jar');
+% end
 compileSources();
 converter = ImageConverter();
 testMode = false;
@@ -103,4 +103,3 @@ if ~testMode
     disp(results);
     
 end
-
