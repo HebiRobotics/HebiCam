@@ -1,0 +1,3 @@
+# Increase memory to handle 4k image
+-Xms1g
+-Xmx1g

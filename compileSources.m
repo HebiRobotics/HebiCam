@@ -1,6 +1,6 @@
 %% Build Java library from sources 
 % Note: requires JDK to be installed and on path
-if(~exist('sources.JavaImage','class'))
+if(~exist('sources.JavaImageConverter','class'))
     
     % Find source directory
     local = fileparts(mfilename('fullpath'));
