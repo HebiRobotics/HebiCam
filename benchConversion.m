@@ -1,8 +1,8 @@
 %% Setup
-% if(exist('sources.JavaImageConverter','class'))
-%     clear all;
-%     javarmpath('sources.jar');
-% end
+if(exist('sources.JavaImageConverter','class'))
+    clear all;
+    javarmpath('sources.jar');
+end
 compileSources();
 converter = ImageConverter();
 testMode = false;
@@ -89,8 +89,8 @@ if ~testMode
         % Benchmark conversions
         toMs = 1E3;
 %         m(j).original = timeit(@()converter.getOriginalImage) * toMs;
-        m(j).compressedArray = timeit(@()converter.getImageFromCompressedArray) * toMs;
         m(j).raw3d = timeit(@()converter.getImageFromRawFormat3D) * toMs;
+        m(j).compressedArray = timeit(@()converter.getImageFromCompressedArray) * toMs;
         m(j).javaArray = timeit(@()converter.getImageFromJavaPixelFormat1D) * toMs;
         m(j).matlabArray = timeit(@()converter.getImageFromMatlabPixelFormat1D) * toMs;
         m(j).sharedMem = timeit(@()converter.getImageFromSharedMemory) * toMs;

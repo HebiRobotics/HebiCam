@@ -95,11 +95,17 @@ public class JavaImageConverter {
     }
 
     public void lock() {
+        if(isLocked)
+            throw new IllegalStateException("Already locked");
         lock.readLock().lock();
+        isLocked = true;
     }
 
-    public void unlock() {
-        lock.readLock().unlock();
+    public void tryUnlock() {
+        if(isLocked){
+            lock.readLock().unlock();
+            isLocked = false;
+        }
     }
 
     Object rawFormat3d; // e.g. byte[1080][1920][3] for rgb or byte[1080][1920] for grayscale
@@ -108,5 +114,6 @@ public class JavaImageConverter {
     byte[] jpegData; // JPEG compressed data
 
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
+    private boolean isLocked = false;
 
 }

@@ -130,16 +130,14 @@ classdef ImageConverter < handle
             %
             % Synchronization is done using Java locks
             
-            % Lock memory
-            lock(this.javaConverter);
+            % Lock memory via handle class that guarantees that destructor
+            % always calls unlock, even on interrupt.
+            lock = MemoryLock(this.javaConverter);
             
             % Read from shared memory. Note that we need to force a copy of
             % the data because otherwise MATLAB will assume that the data
             % doesn't get modified and optimize to just use a pointer.
             img = this.memFile.Data.pixels * 1;
-            
-            % Unlock memory
-            unlock(this.javaConverter);
 
         end
         
