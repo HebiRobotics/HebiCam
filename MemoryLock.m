@@ -20,10 +20,15 @@ classdef MemoryLock < handle
         end
         
         function delete(this)
-            % Gets called when object is deleted, even on interrupt.
-            % Note: I don't know whether constructors can be interrupted,
-            % so there is a check in the Java class that makes sure it only
-            % gets called when necessary. Hence 'try'-Unlock.
+            % The destructor is guaranteed to run when object is deleted 
+            % (e.g. out of scope), even if the user interrupts via ctrl+c.
+            %
+            % Note that the constructor can still be interrupted, so the
+            % lock() may have not executed correctly. Thus, there is a
+            % check in the Java class to make sure that it only unlocks if
+            % the lock() actually executed. Users can only interrupt
+            % MATLAB code, so Java methods are guaranteed to execute
+            % fully once called.
             tryUnlock(this.lock);
         end
         
