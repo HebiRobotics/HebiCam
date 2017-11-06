@@ -34,7 +34,7 @@ classdef ImageConverter < handle
            img = this.matlabImage;
         end
         
-        function img = getImageFromRawFormat3D(this)
+        function image = getImageFromRawFormat3D(this)
             % Uses the built-in auto-conversion between image and byte[][][]
             %
             % Java 'byte' comes back as 'int8'. Images need to be 'uint8' Unfortunately,
@@ -42,19 +42,26 @@ classdef ImageConverter < handle
             % on a 1D array. Thus, even though the data is already sized correctly,
             % we need to first do a reshape to 1D, cast, and then reshape back again.
             
-            % get data from byte[][] / byte[][][]
+            % (1) Get matrix from byte[height][width][channels]
             data = getRawFormat3d(this.javaConverter);
-            [h,w,c] = size(data);
+            [height,width,channels] = size(data);
             
-            % reshape to vector, cast to uint8, then reshape back
-            vector = typecast(reshape(data,w*h*c,1), 'uint8');
-            img = reshape(vector,h,w,c);
+            % (2) Reshape matrix to vector
+            vector = reshape(data, width * height * channels, 1);
+            
+            % (3) Cast int8 data to uint8
+            vector = typecast(vector, 'uint8');
+            
+            % (4) Reshape vector back to original shape
+            image = reshape(vector, height, width, channels);
             
         end
         
-        function img = getImageFromJavaPixelFormat1D(this)
+        function image = getImageFromJavaPixelFormat1D(this)
             % Converts by using array data that is arranged in the same
             % order as the internal BufferedImage buffer.
+            %
+            % Based on https://mathworks.com/matlabcentral/answers/100155-how-can-i-convert-a-java-image-object-into-a-matlab-image-matrix#answer_109503
             %
             % MATLAB stores data in column major format, so we need to
             % 1. cast to uint8
@@ -62,44 +69,49 @@ classdef ImageConverter < handle
             % 3. transpose
             % 4. combine colors
             
-            % get data from byte[]
+            % (1) Get data from byte[] and cast to correct type
             data = getJavaPixelFormat1d(this.javaConverter);
-            [h,w,c] = size(this.matlabImage); % array has no dimension info
+            data = typecast(data, 'uint8');
+            [h,w,c] = size(this.matlabImage); % get dim info
             
             if c == 3 % rgb
-                % Source: https://mathworks.com/matlabcentral/answers/100155-how-can-i-convert-a-java-image-object-into-a-matlab-image-matrix#answer_109503
-                pixelsData = reshape(typecast(data, 'uint8'), 3, w, h);
-                img = cat(3, ...
+                
+                % (2) Reshape matrix for indexing
+                pixelsData = reshape(data, 3, w, h);
+                
+                % (3) Transpose and convert from row major to col major
+                % format
+                image = cat(3, ...
                     transpose(reshape(pixelsData(3, :, :), w, h)), ...
                     transpose(reshape(pixelsData(2, :, :), w, h)), ...
                     transpose(reshape(pixelsData(1, :, :), w, h)));
                 
             elseif c == 1 % grayscale
-                pixelsData = reshape(typecast(data, 'uint8'), w, h);
-                img = pixelsData';
+                pixelsData = reshape(data, w, h);
+                image = pixelsData';
             end
             
         end
         
-        function img = getImageFromMatlabPixelFormat1D(this)
+        function image = getImageFromMatlabPixelFormat1D(this)
             % Converts by using array data that is arranged in the same
             % memory order as what MATLAB uses internally. Thus, we can
             % do a simple cast and reshape of the data.
             
-            % Memory is in the order of a Java buffered image, so we need to cast,
-            % reshape, transpose, and re-order memory
+            % Memory is already in the correct order, so we only need to
+            % cast and reshape
             
-            % get data from byte[]
+            % (1) Get data from byte[] and cast to correct type
             data = getMatlabPixelFormat1d(this.javaConverter);
-            [h,w,c] = size(this.matlabImage);  % array has no dimension info
-            
-            % cast and reshape pre-layed out memory
+            [h,w,c] = size(this.matlabImage);  % get dim info
             vector = typecast(data, 'uint8');
-            img = reshape(vector,h,w,c);
+            
+            % (2) Interpret pre-layed out memory as matrix
+            image = reshape(vector,h,w,c);
 
         end
         
-        function img = getImageFromCompressedArray(this)
+        function image = getImageFromCompressedArray(this)
             % Converts by using array data that was compressed using jpeg
             % in order to reduce the size.
             %
@@ -109,19 +121,20 @@ classdef ImageConverter < handle
             % calling the Java decompression methods followed by
             % reshaping. Doing this here would defeat the purpose.)
             
-            % get compressed data
+            % (1) Get compressed data
             data = getJpegData(this.javaConverter);
+            path = 'tmp.jpg';
             
-            % store as file
-            fileID = fopen('tmp.jpg','w+');
+            % (2) Save as jpeg file
+            fileID = fopen(path,'w+');
             fwrite(fileID, data, 'int8');
             fclose(fileID);
             
-            % read from file
-            img = imread('tmp.jpg');
+            % (3) Read jpeg file
+            image = imread(path);
             
-            % cleanup
-            delete('tmp.jpg');
+            % (4) Cleanup
+            delete(path);
 
         end
         
