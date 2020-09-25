@@ -84,6 +84,25 @@ public class BackgroundFrameGrabber {
     }
 
     /**
+     * Less-blocking call that does not wait for a new image, i.e., users read whatever is in the buffer
+     *
+     * @return true if the lock has been acquired
+     */
+    @Deprecated // experimental non-public feature
+    public boolean tryGetImageLock() {
+        // Make sure users don't have the lock already (e.g. ctrl-c in MATLAB while reading the data)
+        tryReleaseImageLock();
+
+        // Immediately return if acquisition is not active
+        if (!active) throw new IllegalStateException("grabber is not active");
+
+        memoryAccessLock.lock();
+        userHasLock = true;
+        return true;
+
+    }
+
+    /**
      * @return true if the shared memory has been updated and the memory lock has been acquired. False if
      * the lock has not been acquired.
      */
