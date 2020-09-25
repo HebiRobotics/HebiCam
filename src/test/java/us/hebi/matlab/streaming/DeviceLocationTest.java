@@ -52,6 +52,8 @@ public class DeviceLocationTest {
         assertFalse(new DeviceLocation("/home/user/name/myFile.avi").isUrl()); // Linux file
         assertFalse(new DeviceLocation("/dev/video0").isUrl()); // Linux device
         assertFalse(new DeviceLocation("C:/myFile.avi").isUrl()); // Windows file
+
+        assertTrue(new DeviceLocation("udp://@239.0.0.1:9999").isUrl());
     }
 
     @Test
