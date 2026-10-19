@@ -46,7 +46,7 @@
     <properties>
         <!-- Dependency versions. KEEP IN ALPHABETICAL ORDER-->
         <junit.version>4.13.1</junit.version>
-        <javacv.version>1.2</javacv.version>
+        <javacv.version>1.5.14</javacv.version>
         <opencv.version>3.1.0-1.2</opencv.version>
         <ffmpeg.version>3.1.2-1.2</ffmpeg.version>
         <videoinput.version>0.200-1.2</videoinput.version>
